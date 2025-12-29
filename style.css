@@ -101,4 +101,8 @@ canvas {
   height: auto;
 }
 
+.actions button {
+  font-weight: 600;
+}
+
 
