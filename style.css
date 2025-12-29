@@ -60,3 +60,45 @@ canvas {
   touch-action: none;
 }
 
+.app {
+  display: flex;
+  flex: 1;
+}
+
+.suggestions {
+  width: 180px;
+  background: #ffffff;
+  border-left: 1px solid #ddd;
+  padding: 10px;
+  display: none;
+}
+
+.suggestions h3 {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.suggestion-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.suggestion {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  background: #fafafa;
+}
+
+.suggestion:hover {
+  background: #f0f0f0;
+}
+
+.suggestion img {
+  width: 100%;
+  height: auto;
+}
+
+
