@@ -29,6 +29,21 @@ const ICONS = [
   { file: "icons/cloud.svg", type: "curve" }
 ];
 
+function drawPreviewStroke(path) {
+  if (path.length < 2) return;
+
+  ctx.beginPath();
+  ctx.lineWidth = currentStrokeWidth;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#3b82f6";
+
+  path.forEach((p, i) => {
+    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  });
+
+  ctx.stroke();
+}
+
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
   canvas.width = rect.width;
