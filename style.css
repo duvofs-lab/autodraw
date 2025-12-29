@@ -105,4 +105,22 @@ canvas {
   font-weight: 600;
 }
 
+/* ================= MOBILE SUGGESTIONS ================= */
+
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .suggestions {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #ddd;
+    display: none;
+  }
+
+  .suggestion-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 
