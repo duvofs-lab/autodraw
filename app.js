@@ -5,10 +5,10 @@ const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const clearBtn = document.getElementById("clearBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const downloadSvgBtn = document.getElementById("downloadSvgBtn");
 const thickerBtn = document.getElementById("thickerBtn");
 const thinnerBtn = document.getElementById("thinnerBtn");
-
-const downloadSvgBtn = document.getElementById("downloadSvgBtn");
+const colorPicker = document.getElementById("colorPicker");
 
 const suggestionsEl = document.getElementById("suggestions");
 const suggestionList = document.getElementById("suggestionList");
@@ -19,8 +19,10 @@ let elements = [];
 let undoneElements = [];
 
 let currentStrokeWidth = 4;
+let currentColor = colorPicker.value;
+
 const MIN_WIDTH = 2;
-const MAX_WIDTH = 12;
+const MAX_WIDTH = 14;
 
 const ICONS = [
   { file: "icons/line.svg", type: "straight" },
@@ -31,20 +33,7 @@ const ICONS = [
   { file: "icons/cloud.svg", type: "curve" }
 ];
 
-function drawPreviewStroke(path) {
-  if (path.length < 2) return;
-
-  ctx.beginPath();
-  ctx.lineWidth = currentStrokeWidth;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "#3b82f6";
-
-  path.forEach((p, i) => {
-    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-  });
-
-  ctx.stroke();
-}
+/* ================= CANVAS ================= */
 
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -52,38 +41,39 @@ function resizeCanvas() {
   canvas.height = rect.height;
   redraw();
 }
-
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-canvas.addEventListener("pointerdown", startDraw);
-canvas.addEventListener("pointermove", draw);
-canvas.addEventListener("pointerup", endDraw);
-canvas.addEventListener("pointerleave", endDraw);
-
 /* ================= DRAWING ================= */
 
-function startDraw(e) {
+canvas.addEventListener("pointerdown", e => {
   drawing = true;
   currentPath = [{ x: e.offsetX, y: e.offsetY }];
-}
+});
 
-function draw(e) {
+canvas.addEventListener("pointermove", e => {
   if (!drawing) return;
-
   currentPath.push({ x: e.offsetX, y: e.offsetY });
   redraw();
-  drawPreviewStroke(currentPath);
-}
+  drawStroke({
+    path: currentPath,
+    width: currentStrokeWidth,
+    color: currentColor
+  });
+});
 
-function endDraw() {
+canvas.addEventListener("pointerup", finishStroke);
+canvas.addEventListener("pointerleave", finishStroke);
+
+function finishStroke() {
   if (!drawing) return;
   drawing = false;
 
   elements.push({
     type: "stroke",
     path: currentPath,
-    width: currentStrokeWidth
+    width: currentStrokeWidth,
+    color: currentColor
   });
 
   undoneElements = [];
@@ -98,14 +88,14 @@ function analyzeAndSuggest() {
 
   elements.forEach(el => {
     if (el.type !== "stroke") return;
-    const path = el.path;
-    if (path.length > 10) {
-      const start = path[0];
-      const end = path[path.length - 1];
-      if (Math.hypot(end.x - start.x, end.y - start.y) < 20) {
-        isClosed = true;
-      }
-      curveScore += path.length;
+    const p = el.path;
+    if (p.length > 10) {
+      const d = Math.hypot(
+        p[0].x - p[p.length - 1].x,
+        p[0].y - p[p.length - 1].y
+      );
+      if (d < 20) isClosed = true;
+      curveScore += p.length;
     }
   });
 
@@ -125,14 +115,14 @@ function showSuggestions(type) {
   ICONS.filter(i => i.type === type).forEach(icon => {
     const div = document.createElement("div");
     div.className = "suggestion";
-    div.innerHTML = `<img src="${icon.file}" />`;
+    div.innerHTML = `<img src="${icon.file}">`;
     div.onclick = () => addIcon(icon.file);
     suggestionList.appendChild(div);
   });
 }
 
 function addIcon(src) {
-  // Remove last stroke (the one that triggered suggestions)
+  // remove last stroke
   for (let i = elements.length - 1; i >= 0; i--) {
     if (elements[i].type === "stroke") {
       elements.splice(i, 1);
@@ -141,15 +131,10 @@ function addIcon(src) {
   }
 
   const size = Math.min(canvas.width, canvas.height) * 0.4;
+  const x = Math.round((canvas.width - size) / 2);
+  const y = Math.round((canvas.height - size) / 2);
 
-  elements.push({
-    type: "icon",
-    src,
-    x: (canvas.width - size) / 2,
-    y: (canvas.height - size) / 2,
-    size
-  });
-
+  elements.push({ type: "icon", src, x, y, size });
   undoneElements = [];
   redraw();
 }
@@ -158,16 +143,12 @@ function addIcon(src) {
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   elements.forEach(el => {
-    if (el.type === "stroke") {
-      drawStroke(el);
-    } else if (el.type === "icon") {
+    if (el.type === "stroke") drawStroke(el);
+    if (el.type === "icon") {
       const img = new Image();
       img.src = el.src;
-      img.onload = () => {
-        ctx.drawImage(img, el.x, el.y, el.size, el.size);
-      };
+      img.onload = () => ctx.drawImage(img, el.x, el.y, el.size, el.size);
     }
   });
 }
@@ -176,11 +157,10 @@ function drawStroke(stroke) {
   ctx.beginPath();
   ctx.lineWidth = stroke.width;
   ctx.lineCap = "round";
-  ctx.strokeStyle = "#3b82f6";
-
-  stroke.path.forEach((p, i) => {
-    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-  });
+  ctx.strokeStyle = stroke.color;
+  stroke.path.forEach((p, i) =>
+    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)
+  );
   ctx.stroke();
 }
 
@@ -201,25 +181,48 @@ redoBtn.onclick = () => {
 clearBtn.onclick = () => {
   elements = [];
   undoneElements = [];
-  redraw();
   suggestionsEl.style.display = "none";
+  redraw();
 };
 
-/* ================= STROKE SIZE ================= */
+thickerBtn.onclick = () =>
+  (currentStrokeWidth = Math.min(MAX_WIDTH, currentStrokeWidth + 2));
+thinnerBtn.onclick = () =>
+  (currentStrokeWidth = Math.max(MIN_WIDTH, currentStrokeWidth - 2));
 
-thickerBtn.onclick = () => {
-  currentStrokeWidth = Math.min(MAX_WIDTH, currentStrokeWidth + 2);
-};
+colorPicker.onchange = e => (currentColor = e.target.value);
 
-thinnerBtn.onclick = () => {
-  currentStrokeWidth = Math.max(MIN_WIDTH, currentStrokeWidth - 2);
-};
-
-/* ================= DOWNLOAD ================= */
+/* ================= EXPORT ================= */
 
 downloadBtn.onclick = () => {
-  const link = document.createElement("a");
-  link.download = `duvofs-draw-${Date.now()}.png`;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
+  const a = document.createElement("a");
+  a.download = `duvofs-draw-${Date.now()}.png`;
+  a.href = canvas.toDataURL("image/png");
+  a.click();
+};
+
+downloadSvgBtn.onclick = () => {
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">`;
+
+  elements.forEach(el => {
+    if (el.type === "stroke") {
+      const d = el.path
+        .map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`)
+        .join(" ");
+      svg += `<path d="${d}" fill="none" stroke="${el.color}" stroke-width="${el.width}" stroke-linecap="round"/>`;
+    }
+    if (el.type === "icon") {
+      svg += `<image href="${el.src}" x="${el.x}" y="${el.y}" width="${el.size}" height="${el.size}"/>`;
+    }
+  });
+
+  svg += "</svg>";
+
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `duvofs-draw-${Date.now()}.svg`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
