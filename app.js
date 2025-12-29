@@ -5,22 +5,28 @@ const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const clearBtn = document.getElementById("clearBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const thickerBtn = document.getElementById("thickerBtn");
+const thinnerBtn = document.getElementById("thinnerBtn");
 
 const suggestionsEl = document.getElementById("suggestions");
 const suggestionList = document.getElementById("suggestionList");
 
 let drawing = false;
-let paths = [];
-let undonePaths = [];
 let currentPath = [];
+let elements = [];
+let undoneElements = [];
+
+let currentStrokeWidth = 4;
+const MIN_WIDTH = 2;
+const MAX_WIDTH = 12;
 
 const ICONS = [
-  { name: "line", file: "icons/line.svg", type: "straight" },
-  { name: "curve", file: "icons/curve.svg", type: "curve" },
-  { name: "circle", file: "icons/circle.svg", type: "closed" },
-  { name: "square", file: "icons/square.svg", type: "box" },
-  { name: "arrow", file: "icons/arrow.svg", type: "straight" },
-  { name: "cloud", file: "icons/cloud.svg", type: "curve" }
+  { file: "icons/line.svg", type: "straight" },
+  { file: "icons/curve.svg", type: "curve" },
+  { file: "icons/circle.svg", type: "closed" },
+  { file: "icons/square.svg", type: "closed" },
+  { file: "icons/arrow.svg", type: "straight" },
+  { file: "icons/cloud.svg", type: "curve" }
 ];
 
 function resizeCanvas() {
@@ -38,39 +44,47 @@ canvas.addEventListener("pointermove", draw);
 canvas.addEventListener("pointerup", endDraw);
 canvas.addEventListener("pointerleave", endDraw);
 
+/* ================= DRAWING ================= */
+
 function startDraw(e) {
   drawing = true;
-  currentPath = [];
-  ctx.beginPath();
-  ctx.moveTo(e.offsetX, e.offsetY);
-  currentPath.push({ x: e.offsetX, y: e.offsetY });
+  currentPath = [{ x: e.offsetX, y: e.offsetY }];
 }
 
 function draw(e) {
   if (!drawing) return;
-  ctx.lineWidth = 4;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "#3b82f6";
-  ctx.lineTo(e.offsetX, e.offsetY);
-  ctx.stroke();
   currentPath.push({ x: e.offsetX, y: e.offsetY });
+
+  redraw();
+  drawStroke({
+    path: currentPath,
+    width: currentStrokeWidth
+  });
 }
 
 function endDraw() {
   if (!drawing) return;
   drawing = false;
-  paths.push(currentPath);
-  undonePaths = [];
+
+  elements.push({
+    type: "stroke",
+    path: currentPath,
+    width: currentStrokeWidth
+  });
+
+  undoneElements = [];
   analyzeAndSuggest();
 }
 
-function analyzeAndSuggest() {
-  if (!paths.length) return;
+/* ================= ANALYSIS ================= */
 
+function analyzeAndSuggest() {
   let isClosed = false;
   let curveScore = 0;
 
-  paths.forEach(path => {
+  elements.forEach(el => {
+    if (el.type !== "stroke") return;
+    const path = el.path;
     if (path.length > 10) {
       const start = path[0];
       const end = path[path.length - 1];
@@ -88,6 +102,8 @@ function analyzeAndSuggest() {
   showSuggestions(type);
 }
 
+/* ================= SUGGESTIONS ================= */
+
 function showSuggestions(type) {
   suggestionList.innerHTML = "";
   suggestionsEl.style.display = "block";
@@ -96,70 +112,92 @@ function showSuggestions(type) {
     const div = document.createElement("div");
     div.className = "suggestion";
     div.innerHTML = `<img src="${icon.file}" />`;
-    div.onclick = () => replaceWithIcon(icon.file);
+    div.onclick = () => addIcon(icon.file);
     suggestionList.appendChild(div);
   });
 }
 
-function replaceWithIcon(src) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  paths = [];
+function addIcon(src) {
+  const size = Math.min(canvas.width, canvas.height) * 0.4;
 
-  const img = new Image();
-  img.onload = () => {
-    const size = Math.min(canvas.width, canvas.height) * 0.6;
-    ctx.drawImage(
-      img,
-      (canvas.width - size) / 2,
-      (canvas.height - size) / 2,
-      size,
-      size
-    );
-  };
-  img.src = src;
+  elements.push({
+    type: "icon",
+    src,
+    x: (canvas.width - size) / 2,
+    y: (canvas.height - size) / 2,
+    size
+  });
+
+  undoneElements = [];
+  redraw();
 }
+
+/* ================= RENDER ================= */
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.lineWidth = 4;
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "#3b82f6";
 
-  paths.forEach(path => {
-    ctx.beginPath();
-    path.forEach((p, i) => {
-      i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-    });
-    ctx.stroke();
+  elements.forEach(el => {
+    if (el.type === "stroke") {
+      drawStroke(el);
+    } else if (el.type === "icon") {
+      const img = new Image();
+      img.src = el.src;
+      img.onload = () => {
+        ctx.drawImage(img, el.x, el.y, el.size, el.size);
+      };
+    }
   });
 }
 
-/* ================= DOWNLOAD ================= */
+function drawStroke(stroke) {
+  ctx.beginPath();
+  ctx.lineWidth = stroke.width;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#3b82f6";
 
-downloadBtn.addEventListener("click", () => {
-  const link = document.createElement("a");
-  link.download = "duvofs-draw.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-});
+  stroke.path.forEach((p, i) => {
+    i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  });
+  ctx.stroke();
+}
 
 /* ================= CONTROLS ================= */
 
-undoBtn.addEventListener("click", () => {
-  if (!paths.length) return;
-  undonePaths.push(paths.pop());
+undoBtn.onclick = () => {
+  if (!elements.length) return;
+  undoneElements.push(elements.pop());
   redraw();
-});
+};
 
-redoBtn.addEventListener("click", () => {
-  if (!undonePaths.length) return;
-  paths.push(undonePaths.pop());
+redoBtn.onclick = () => {
+  if (!undoneElements.length) return;
+  elements.push(undoneElements.pop());
   redraw();
-});
+};
 
-clearBtn.addEventListener("click", () => {
-  paths = [];
-  undonePaths = [];
+clearBtn.onclick = () => {
+  elements = [];
+  undoneElements = [];
   redraw();
   suggestionsEl.style.display = "none";
-});
+};
+
+/* ================= STROKE SIZE ================= */
+
+thickerBtn.onclick = () => {
+  currentStrokeWidth = Math.min(MAX_WIDTH, currentStrokeWidth + 2);
+};
+
+thinnerBtn.onclick = () => {
+  currentStrokeWidth = Math.max(MIN_WIDTH, currentStrokeWidth - 2);
+};
+
+/* ================= DOWNLOAD ================= */
+
+downloadBtn.onclick = () => {
+  const link = document.createElement("a");
+  link.download = `duvofs-draw-${Date.now()}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+};
