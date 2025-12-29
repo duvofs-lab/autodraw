@@ -8,6 +8,8 @@ const downloadBtn = document.getElementById("downloadBtn");
 const thickerBtn = document.getElementById("thickerBtn");
 const thinnerBtn = document.getElementById("thinnerBtn");
 
+const downloadSvgBtn = document.getElementById("downloadSvgBtn");
+
 const suggestionsEl = document.getElementById("suggestions");
 const suggestionList = document.getElementById("suggestionList");
 
