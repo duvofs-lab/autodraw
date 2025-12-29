@@ -53,13 +53,10 @@ function startDraw(e) {
 
 function draw(e) {
   if (!drawing) return;
-  currentPath.push({ x: e.offsetX, y: e.offsetY });
 
+  currentPath.push({ x: e.offsetX, y: e.offsetY });
   redraw();
-  drawStroke({
-    path: currentPath,
-    width: currentStrokeWidth
-  });
+  drawPreviewStroke(currentPath);
 }
 
 function endDraw() {
