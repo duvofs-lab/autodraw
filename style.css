@@ -12,7 +12,6 @@ body {
   flex-direction: column;
 }
 
-/* Top bar */
 .topbar {
   background: #ffffff;
   padding: 10px 14px;
@@ -29,8 +28,8 @@ body {
 
 .actions {
   display: flex;
+  gap: 6px;
   align-items: center;
-  gap: 8px;
 }
 
 .actions button,
@@ -40,25 +39,13 @@ body {
   background: #f9f9f9;
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
 }
 
-.actions input[type="color"] {
-  padding: 2px;
-  height: 32px;
-}
-
-.actions button:hover {
-  background: #efefef;
-}
-
-/* Layout */
 .app {
   display: flex;
   flex: 1;
 }
 
-/* Canvas */
 .canvas-wrapper {
   flex: 1;
   display: flex;
@@ -68,66 +55,44 @@ body {
 }
 
 canvas {
-  background: #ffffff;
+  background: #fff;
   width: 100%;
   max-width: 900px;
   height: 100%;
   max-height: 600px;
   border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(0,0,0,.1);
   touch-action: none;
 }
 
-/* Suggestions */
 .suggestions {
   width: 180px;
-  background: #ffffff;
+  background: #fff;
   border-left: 1px solid #ddd;
   padding: 10px;
   display: none;
 }
 
-.suggestions h3 {
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
 .suggestion-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2,1fr);
   gap: 8px;
 }
 
 .suggestion {
   border: 1px solid #ddd;
-  border-radius: 6px;
   padding: 6px;
   cursor: pointer;
-  background: #fafafa;
 }
 
-.suggestion:hover {
-  background: #f0f0f0;
-}
-
-.suggestion img {
-  width: 100%;
-  height: auto;
-}
-
-/* Mobile bottom drawer */
 @media (max-width: 768px) {
-  .app {
-    flex-direction: column;
-  }
-
+  .app { flex-direction: column; }
   .suggestions {
     width: 100%;
     border-left: none;
     border-top: 1px solid #ddd;
   }
-
   .suggestion-list {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4,1fr);
   }
 }
