@@ -118,6 +118,14 @@ function showSuggestions(type) {
 }
 
 function addIcon(src) {
+  // Remove last stroke (the one that triggered suggestions)
+  for (let i = elements.length - 1; i >= 0; i--) {
+    if (elements[i].type === "stroke") {
+      elements.splice(i, 1);
+      break;
+    }
+  }
+
   const size = Math.min(canvas.width, canvas.height) * 0.4;
 
   elements.push({
