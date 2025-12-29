@@ -4,28 +4,30 @@
   <meta charset="UTF-8" />
   <title>Duvofs Draw</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Top Bar -->
-  <header class="topbar">
-    <span class="logo">Duvofs Draw</span>
+<header class="topbar">
+  <span class="logo">Duvofs Draw</span>
+  <div class="actions">
+    <button id="undoBtn">Undo</button>
+    <button id="redoBtn">Redo</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+</header>
 
-    <div class="actions">
-      <button id="undoBtn">Undo</button>
-      <button id="redoBtn">Redo</button>
-      <button id="clearBtn">Clear</button>
-    </div>
-  </header>
-
-  <!-- Canvas Wrapper -->
+<div class="app">
   <main class="canvas-wrapper">
     <canvas id="drawCanvas"></canvas>
   </main>
 
-  <script src="app.js"></script>
+  <aside class="suggestions" id="suggestions">
+    <h3>Suggestions</h3>
+    <div class="suggestion-list" id="suggestionList"></div>
+  </aside>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
-
