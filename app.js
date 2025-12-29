@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const clearBtn = document.getElementById("clearBtn");
+const downloadBtn = document.getElementById("downloadBtn");
 
 const suggestionsEl = document.getElementById("suggestions");
 const suggestionList = document.getElementById("suggestionList");
@@ -132,6 +133,17 @@ function redraw() {
     ctx.stroke();
   });
 }
+
+/* ================= DOWNLOAD ================= */
+
+downloadBtn.addEventListener("click", () => {
+  const link = document.createElement("a");
+  link.download = "duvofs-draw.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+});
+
+/* ================= CONTROLS ================= */
 
 undoBtn.addEventListener("click", () => {
   if (!paths.length) return;
