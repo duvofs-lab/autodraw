@@ -27,20 +27,38 @@ body {
   font-size: 16px;
 }
 
-.actions button {
-  margin-left: 8px;
-  padding: 6px 12px;
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actions button,
+.actions input[type="color"] {
+  padding: 6px 10px;
   border: 1px solid #ccc;
   background: #f9f9f9;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+}
+
+.actions input[type="color"] {
+  padding: 2px;
+  height: 32px;
 }
 
 .actions button:hover {
   background: #efefef;
 }
 
-/* Canvas area */
+/* Layout */
+.app {
+  display: flex;
+  flex: 1;
+}
+
+/* Canvas */
 .canvas-wrapper {
   flex: 1;
   display: flex;
@@ -60,11 +78,7 @@ canvas {
   touch-action: none;
 }
 
-.app {
-  display: flex;
-  flex: 1;
-}
-
+/* Suggestions */
 .suggestions {
   width: 180px;
   background: #ffffff;
@@ -101,12 +115,7 @@ canvas {
   height: auto;
 }
 
-.actions button {
-  font-weight: 600;
-}
-
-/* ================= MOBILE SUGGESTIONS ================= */
-
+/* Mobile bottom drawer */
 @media (max-width: 768px) {
   .app {
     flex-direction: column;
@@ -116,11 +125,9 @@ canvas {
     width: 100%;
     border-left: none;
     border-top: 1px solid #ddd;
-    display: none;
   }
 
   .suggestion-list {
     grid-template-columns: repeat(4, 1fr);
   }
 }
-
