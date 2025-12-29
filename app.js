@@ -5,10 +5,22 @@ const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const clearBtn = document.getElementById("clearBtn");
 
+const suggestionsEl = document.getElementById("suggestions");
+const suggestionList = document.getElementById("suggestionList");
+
 let drawing = false;
 let paths = [];
 let undonePaths = [];
 let currentPath = [];
+
+const ICONS = [
+  { name: "line", file: "icons/line.svg", type: "straight" },
+  { name: "curve", file: "icons/curve.svg", type: "curve" },
+  { name: "circle", file: "icons/circle.svg", type: "closed" },
+  { name: "square", file: "icons/square.svg", type: "box" },
+  { name: "arrow", file: "icons/arrow.svg", type: "straight" },
+  { name: "cloud", file: "icons/cloud.svg", type: "curve" }
+];
 
 function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -25,27 +37,22 @@ canvas.addEventListener("pointermove", draw);
 canvas.addEventListener("pointerup", endDraw);
 canvas.addEventListener("pointerleave", endDraw);
 
-/* ================= DRAWING ================= */
-
 function startDraw(e) {
   drawing = true;
   currentPath = [];
   ctx.beginPath();
   ctx.moveTo(e.offsetX, e.offsetY);
-  currentPath.push({ x: e.offsetX, y: e.offsetY, t: Date.now() });
+  currentPath.push({ x: e.offsetX, y: e.offsetY });
 }
 
 function draw(e) {
   if (!drawing) return;
-
   ctx.lineWidth = 4;
   ctx.lineCap = "round";
   ctx.strokeStyle = "#3b82f6";
-
   ctx.lineTo(e.offsetX, e.offsetY);
   ctx.stroke();
-
-  currentPath.push({ x: e.offsetX, y: e.offsetY, t: Date.now() });
+  currentPath.push({ x: e.offsetX, y: e.offsetY });
 }
 
 function endDraw() {
@@ -53,79 +60,63 @@ function endDraw() {
   drawing = false;
   paths.push(currentPath);
   undonePaths = [];
-
-  analyzeDrawing(); // 👈 SMART PART
+  analyzeAndSuggest();
 }
 
-/* ================= ANALYSIS ================= */
+function analyzeAndSuggest() {
+  if (!paths.length) return;
 
-function analyzeDrawing() {
-  const analysis = {
-    strokeCount: paths.length,
-    totalPoints: 0,
-    boundingBox: getBoundingBox(),
-    curvatureScore: 0,
-    closedShapes: 0
-  };
+  let isClosed = false;
+  let curveScore = 0;
 
   paths.forEach(path => {
-    analysis.totalPoints += path.length;
-    analysis.curvatureScore += getCurvature(path);
-    if (isClosed(path)) analysis.closedShapes++;
+    if (path.length > 10) {
+      const start = path[0];
+      const end = path[path.length - 1];
+      if (Math.hypot(end.x - start.x, end.y - start.y) < 20) {
+        isClosed = true;
+      }
+      curveScore += path.length;
+    }
   });
 
-  analysis.curvatureScore = Number(
-    (analysis.curvatureScore / paths.length).toFixed(2)
-  );
+  let type = "straight";
+  if (isClosed) type = "closed";
+  else if (curveScore > 40) type = "curve";
 
-  console.clear();
-  console.log("🧠 Drawing Analysis:", analysis);
+  showSuggestions(type);
 }
 
-/* ================= HELPERS ================= */
+function showSuggestions(type) {
+  suggestionList.innerHTML = "";
+  suggestionsEl.style.display = "block";
 
-function getBoundingBox() {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-  paths.flat().forEach(p => {
-    minX = Math.min(minX, p.x);
-    minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x);
-    maxY = Math.max(maxY, p.y);
+  ICONS.filter(i => i.type === type).forEach(icon => {
+    const div = document.createElement("div");
+    div.className = "suggestion";
+    div.innerHTML = `<img src="${icon.file}" />`;
+    div.onclick = () => replaceWithIcon(icon.file);
+    suggestionList.appendChild(div);
   });
-
-  return {
-    width: Math.round(maxX - minX),
-    height: Math.round(maxY - minY)
-  };
 }
 
-function getCurvature(path) {
-  let curve = 0;
-  for (let i = 1; i < path.length - 1; i++) {
-    const a = path[i - 1];
-    const b = path[i];
-    const c = path[i + 1];
+function replaceWithIcon(src) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  paths = [];
 
-    const angle = Math.abs(
-      Math.atan2(c.y - b.y, c.x - b.x) -
-      Math.atan2(a.y - b.y, a.x - b.x)
+  const img = new Image();
+  img.onload = () => {
+    const size = Math.min(canvas.width, canvas.height) * 0.6;
+    ctx.drawImage(
+      img,
+      (canvas.width - size) / 2,
+      (canvas.height - size) / 2,
+      size,
+      size
     );
-
-    curve += angle;
-  }
-  return curve;
+  };
+  img.src = src;
 }
-
-function isClosed(path) {
-  if (path.length < 10) return false;
-  const start = path[0];
-  const end = path[path.length - 1];
-  const distance = Math.hypot(end.x - start.x, end.y - start.y);
-  return distance < 20;
-}
-
-/* ================= REDRAW ================= */
 
 function redraw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -141,8 +132,6 @@ function redraw() {
     ctx.stroke();
   });
 }
-
-/* ================= CONTROLS ================= */
 
 undoBtn.addEventListener("click", () => {
   if (!paths.length) return;
@@ -160,5 +149,5 @@ clearBtn.addEventListener("click", () => {
   paths = [];
   undonePaths = [];
   redraw();
-  console.clear();
+  suggestionsEl.style.display = "none";
 });
