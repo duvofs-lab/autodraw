@@ -29,13 +29,17 @@ let selectedIndex = null;
 let strokeWidth = 4;
 let strokeColor = colorPicker.value;
 
-/* ===== ICONS ===== */
+/* ===== ICON LIBRARY ===== */
 const ICONS = [
+  { file: "icons/line.svg", type: "line" },
+  { file: "icons/arrow.svg", type: "line" },
+  { file: "icons/circle.svg", type: "circle" },
+  { file: "icons/square.svg", type: "square" },
   { file: "icons/curve.svg", type: "curve" },
-  { file: "icons/cloud.svg", type: "curve" }
+  { file: "icons/cloud.svg", type: "cloud" }
 ];
 
-/* ===== CANVAS SETUP ===== */
+/* ===== CANVAS ===== */
 function resize() {
   const r = canvas.getBoundingClientRect();
   canvas.width = r.width;
@@ -78,41 +82,50 @@ function finishStroke() {
   });
 
   undone = [];
-  analyzeAndSuggest();
+  analyzeAndSuggest(currentPath);
 }
 
-/* ===== SELECTION ===== */
-canvas.onclick = e => {
-  if (tool !== "select") return;
-  selectedIndex = elements.findIndex(el => hitTest(el, e.offsetX, e.offsetY));
-  redraw();
-};
-
-function hitTest(el, x, y) {
-  if (el.type === "icon") {
-    return (
-      x >= el.x && x <= el.x + el.size &&
-      y >= el.y && y <= el.y + el.size
-    );
-  }
-  return false;
-}
-
-/* ===== ANALYSIS & SUGGESTIONS ===== */
-function analyzeAndSuggest() {
+/* ===== SHAPE ANALYSIS ===== */
+function analyzeAndSuggest(path) {
   suggestionList.innerHTML = "";
   suggestionsEl.style.display = "block";
 
-  ICONS.forEach(icon => {
-    const d = document.createElement("div");
-    d.className = "suggestion";
-    d.innerHTML = `<img src="${icon.file}">`;
-    d.onclick = () => replaceWithIcon(icon.file);
-    suggestionList.appendChild(d);
-  });
+  const start = path[0];
+  const end = path[path.length - 1];
+  const closed = distance(start, end) < 20;
+
+  const bounds = getStrokeBounds({ path });
+  const aspect = bounds.width / bounds.height;
+
+  let detected;
+
+  if (!closed && bounds.width > bounds.height * 2) {
+    detected = "line";
+  } else if (closed && aspect > 0.8 && aspect < 1.2) {
+    detected = "circle";
+  } else if (closed && (aspect < 0.8 || aspect > 1.2)) {
+    detected = "square";
+  } else if (!closed) {
+    detected = "curve";
+  } else {
+    detected = "cloud";
+  }
+
+  ICONS.filter(i => i.type === detected || (detected === "line" && i.type === "arrow"))
+    .forEach(icon => {
+      const d = document.createElement("div");
+      d.className = "suggestion";
+      d.innerHTML = `<img src="${icon.file}">`;
+      d.onclick = () => replaceWithIcon(icon.file);
+      suggestionList.appendChild(d);
+    });
 }
 
-/* ===== BOUNDING BOX HELPERS ===== */
+/* ===== HELPERS ===== */
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
 function getStrokeBounds(stroke) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
@@ -126,13 +139,15 @@ function getStrokeBounds(stroke) {
   return {
     centerX: (minX + maxX) / 2,
     centerY: (minY + maxY) / 2,
+    width: maxX - minX,
+    height: maxY - minY,
     size: Math.max(maxX - minX, maxY - minY) * 1.3
   };
 }
 
-/* ===== ICON REPLACEMENT (FIXED) ===== */
+/* ===== ICON REPLACEMENT ===== */
 function replaceWithIcon(src) {
-  let lastStroke = null;
+  let lastStroke;
 
   for (let i = elements.length - 1; i >= 0; i--) {
     if (elements[i].type === "stroke") {
@@ -144,14 +159,14 @@ function replaceWithIcon(src) {
 
   if (!lastStroke) return;
 
-  const bounds = getStrokeBounds(lastStroke);
-  const size = Math.max(40, bounds.size);
+  const b = getStrokeBounds(lastStroke);
+  const size = Math.max(40, b.size);
 
   elements.push({
     type: "icon",
     src,
-    x: bounds.centerX - size / 2,
-    y: bounds.centerY - size / 2,
+    x: b.centerX - size / 2,
+    y: b.centerY - size / 2,
     size
   });
 
@@ -168,12 +183,6 @@ function redraw() {
       const img = new Image();
       img.src = el.src;
       img.onload = () => ctx.drawImage(img, el.x, el.y, el.size, el.size);
-    }
-
-    if (i === selectedIndex && el.type === "icon") {
-      ctx.strokeStyle = "red";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(el.x - 4, el.y - 4, el.size + 8, el.size + 8);
     }
   });
 }
@@ -194,35 +203,9 @@ thickerBtn.onclick = () => strokeWidth = Math.min(14, strokeWidth + 2);
 thinnerBtn.onclick = () => strokeWidth = Math.max(2, strokeWidth - 2);
 colorPicker.onchange = e => strokeColor = e.target.value;
 
-undoBtn.onclick = () => {
-  if (!elements.length) return;
-  undone.push(elements.pop());
-  redraw();
-};
-
-redoBtn.onclick = () => {
-  if (!undone.length) return;
-  elements.push(undone.pop());
-  redraw();
-};
-
-clearBtn.onclick = () => {
-  elements = [];
-  undone = [];
-  selectedIndex = null;
-  redraw();
-};
-
-/* ===== KEYBOARD SHORTCUTS ===== */
-document.addEventListener("keydown", e => {
-  if (e.ctrlKey && e.key.toLowerCase() === "z") undoBtn.click();
-  if (e.ctrlKey && e.key.toLowerCase() === "y") redoBtn.click();
-  if (e.key === "Delete" && selectedIndex !== null) {
-    elements.splice(selectedIndex, 1);
-    selectedIndex = null;
-    redraw();
-  }
-});
+undoBtn.onclick = () => { if (elements.length) { undone.push(elements.pop()); redraw(); } };
+redoBtn.onclick = () => { if (undone.length) { elements.push(undone.pop()); redraw(); } };
+clearBtn.onclick = () => { elements = []; undone = []; redraw(); };
 
 /* ===== EXPORT ===== */
 downloadBtn.onclick = () => {
@@ -234,19 +217,15 @@ downloadBtn.onclick = () => {
 
 downloadSvgBtn.onclick = () => {
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}">`;
-
   elements.forEach(el => {
     if (el.type === "stroke") {
-      const d = el.path
-        .map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`)
-        .join(" ");
+      const d = el.path.map((p,i)=>`${i?"L":"M"}${p.x} ${p.y}`).join(" ");
       svg += `<path d="${d}" stroke="${el.color}" stroke-width="${el.width}" fill="none" stroke-linecap="round"/>`;
     }
     if (el.type === "icon") {
       svg += `<image href="${el.src}" x="${el.x}" y="${el.y}" width="${el.size}" height="${el.size}"/>`;
     }
   });
-
   svg += "</svg>";
 
   const blob = new Blob([svg], { type: "image/svg+xml" });
